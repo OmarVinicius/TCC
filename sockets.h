@@ -23,8 +23,15 @@ extern "C" {
 #include <bluetooth/rfcomm.h>
 #include <bluetooth/sco.h>
     
+    /** 
+     * \brief Define a variável que armazena o endereço do adaptador que simula
+     * o headset
+     */
     void definir_endr_adap_hs_literal(char* endr);
     
+    /** 
+     * \brief Define a variável que armazena o endereço do headset
+     */
     void definir_endr_fone_literal(char* endr);
 
     /** 

