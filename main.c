@@ -1,9 +1,9 @@
 
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "conexao.h"
 #include "gerenc_adaptador.h"
 #include "servicos.h"
 #include "sockets.h"
@@ -13,7 +13,16 @@
  */
 int main(int argc, char* argv[]) 
 {
-    
+    if(argc==1){
+		printf("Insira como argumento, o endereço MAC do headset\n");
+		return EXIT_FAILURE;
+	}else{
+		if(argc>2){
+			printf("Insira como argumento, apenas o endereço MAC do headset\n");
+			return EXIT_FAILURE;
+		}
+	}
+	
     char endr_fone[18];
     strcpy(endr_fone, argv[1]);
     definir_endr_fone_literal(endr_fone);
