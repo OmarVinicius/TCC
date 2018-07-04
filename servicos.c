@@ -1,24 +1,6 @@
 
 #include "servicos.h"
 
-
-/*
-int busca_servico()
-{
-    
-}
-
-int remove_servico()
-{
-    
-}
-
-int exibe_servicos()
-{
-    
-}
-*/
-
 int registra_perfil_hs(uint8_t porta)
 {
     

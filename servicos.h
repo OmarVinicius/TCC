@@ -16,31 +16,6 @@ extern "C" {
 #include <bluetooth/sdp_lib.h>
 
     /** 
-     * \brief Busca um determinado perfil de serviço
-     * 
-     * \param -- Nome do serviço procurado
-     * 
-     * \return Indica se o serviço foi encontrado ou não
-     */
-    int busca_servico();
-
-    /** 
-     * \brief Remove um determinado perfil de serviço local
-     * 
-     * \param -- Nome do serviço a ser removido
-     * 
-     * \return Indica se ocorreu uma falha durante a remoção
-     */
-    int remove_servico();
-
-    /** 
-     * \brief Exibe os perfis de serviços locais ou remotos disponíveis
-     * 
-     * \return Indica se ocorreu uma falha durante a obtenção das informações
-     */
-    int exibe_servicos();
-
-    /** 
      * \brief Registra o perfil de serviço Headset, localmente
      * 
      * \param porta Número da porta que será utilizada pelo serviço
