@@ -35,11 +35,11 @@ extern "C" {
     void definir_endr_fone_literal(char* endr);
 
     /** 
-     * \brief Inicializa os sockets RFCOMM e SCO do smartphone
+     * \brief Inicializa os sockets RFCOMM tanto do smartphone quanto do headset
      * 
      * \return Indica se a conexão foi estabelecida com sucesso
      */
-    int inicializa_sockets_tel();
+    int inicializa_sockets_rfcomm();
 
     /** 
      * \brief Configura o socket RFCOMM e aguarda conexão do smartphone
@@ -48,21 +48,21 @@ extern "C" {
      * 
      * \return Indica se a conexão foi estabelecida com sucesso
      */
-    int rfcomm_socket_tel(uint8_t porta);
+    int ini_rfcomm_tel(uint8_t porta);
 
     /** 
      * \brief Configura o socket SCO e aguarda conexão do smartphone
      * 
      * \return Indica se a conexão foi estabelecida com sucesso
      */
-    int sco_socket_tel();
+    int ini_sco_tel();
 
     /** 
-     * \brief Inicializa os sockets RFCOMM e SCO do headset
+     * \brief Inicializa os sockets SCO tanto do smartphone quanto do headset
      * 
      * \return Indica se a conexão foi estabelecida com sucesso
      */
-    int inicializa_sockets_fone();
+    int inicializa_sockets_sco();
 
     /** 
      * \brief Configura o socket RFCOMM e conecta-se ao headset
@@ -71,14 +71,14 @@ extern "C" {
      * 
      * \return Indica se a conexão foi estabelecida com sucesso
      */
-    int rfcomm_socket_fone(uint8_t porta);
+    int ini_rfcomm_fone(uint8_t porta);
 
     /** 
      * \brief Configura o socket SCO e aguarda conexão do headset
      * 
      * \return Indica se a conexão foi estabelecida com sucesso
      */
-    int sco_socket_fone();
+    int ini_sco_fone();
 
     /** 
      * \brief Inicia o loop responsável pelo encaminhamento e
@@ -87,6 +87,16 @@ extern "C" {
      * \return Indica se o loop foi encerrado normalmente ou devido alguma falha
      */
     int loop_chamada();
+    
+    /**
+     * \brief Finaliza os sockets RFCOMM, tanto do smartphone quanto do headset
+     */
+    void encerra_sockets_rfcomm();
+    
+    /**
+     * \brief Finaliza os sockets SCO, tanto do smartphone quanto do headset
+     */
+    void encerra_sockets_sco();
 
 
 #ifdef __cplusplus

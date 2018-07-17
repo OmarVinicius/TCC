@@ -22,26 +22,35 @@ void definir_endr_fone_literal(char* endr)
     strcpy(endr_fone_literal, endr);
 }
 
-int inicializa_sockets_tel()
+int inicializa_sockets_rfcomm()
 {
     if(rfcomm_tel_socket == -1){
-        rfcomm_socket_tel(3);
-        printf("Socket RFCOMM smartphone %d\n", rfcomm_tel_socket);
+        
+        ini_rfcomm_tel(3);
+        if(rfcomm_tel_socket!=-1){
+            
+            printf("Socket RFCOMM smartphone %d\n", rfcomm_tel_socket);
+            
+        }else
+            return -1;
     }
-
-    sco_socket_tel();
-    printf("Socket SCO smartphone %d\n", sco_tel_socket);
-
-    if (rfcomm_tel_socket == -1 || sco_tel_socket == -1) {
-        printf("%s\n", "Erro ao iniciar os sockets com o smartphone");
-        return -1;
-    } else {
-        printf("%s\n", "Sockets com o smartphone, iniciados corretamente");
+    
+    if(rfcomm_fone_socket == -1){
+        
+        ini_rfcomm_fone(4);
+        if(rfcomm_fone_socket!=-1){
+            
+            printf("Socket RFCOMM headset %d\n", rfcomm_fone_socket);
+            
+        }else
+            return -1;
+    }
+    
+    if(rfcomm_tel_socket!=-1 && rfcomm_fone_socket!=-1)
         return 0;
-    }
 }
 
-int rfcomm_socket_tel(uint8_t porta)
+int ini_rfcomm_tel(uint8_t porta)
 {
     int sock;
     int cliente = -1;
@@ -88,7 +97,7 @@ int rfcomm_socket_tel(uint8_t porta)
     }
 }
 
-int sco_socket_tel()
+int ini_sco_tel()
 {
     int sock, erro;
     int cliente = -1;
@@ -157,26 +166,36 @@ int sco_socket_tel()
     return cliente;
 }
 
-int inicializa_sockets_fone()
+int inicializa_sockets_sco()
 {
-    if(rfcomm_fone_socket == -1){
-        rfcomm_socket_fone(4);
-        printf("Socket RFCOMM headset %d\n", rfcomm_fone_socket);
-    }
-
-    sco_socket_fone();
-    printf("Socket SCO headset %d\n", sco_fone_socket);
-
-    if (rfcomm_fone_socket == -1 || sco_fone_socket == -1) {
-        printf("%s\n", "Erro ao iniciar os sockets com o headset");
+    ini_sco_tel();
+    if(sco_tel_socket!=-1){
+                
+        printf("Socket SCO smartphone %d\n", sco_tel_socket);       
+        printf("%s\n", "Sockets com o smartphone, iniciados corretamente");
+                
+    }else{
+        encerra_sockets_rfcomm();
         return -1;
-    } else {
-        printf("%s\n", "Sockets com o headset, iniciados corretamente");
-        return 0;
     }
+    
+    ini_sco_fone();
+    if(sco_fone_socket!=-1){
+                
+        printf("Socket SCO headset %d\n", sco_fone_socket);     
+        printf("%s\n", "Sockets com o headset, iniciados corretamente");
+                
+    }else{
+        encerra_sockets_rfcomm();
+        encerra_sockets_sco();
+        return -1;
+    }
+    
+    if(sco_tel_socket!=-1 && sco_fone_socket!=-1)
+        return 0;
 }
 
-int rfcomm_socket_fone(uint8_t porta)
+int ini_rfcomm_fone(uint8_t porta)
 {
     int sock;
     int status = -1;
@@ -208,7 +227,7 @@ int rfcomm_socket_fone(uint8_t porta)
     return status;
 }
 
-int sco_socket_fone()
+int ini_sco_fone()
 {
     int sock, erro;
     int status = -1;
@@ -285,6 +304,8 @@ int loop_chamada()
     }
 
     printf("\n\n");
+    
+    int ocorreu_erro = 0;
 
     while (1) {
 
@@ -292,15 +313,19 @@ int loop_chamada()
          * e armazena no buffer para posterior execução e 
          * encaminhamento para o headset */
         if ((compr_pact_tel_sco = recv(sco_tel_socket, scobuffer, 
-                                    sizeof (scobuffer), 0)) <= 0) {
+                                    48, 0)) <= 0) {
             perror("ERRO RX sco smartphone");
+            ocorreu_erro=errno;
             break;
         }
-        printf("RX sco smartphone: %d sock: %d\n", compr_pact_tel_sco, sco_tel_socket);
+        printf("RX sco smartphone: %d sock: %d\n", compr_pact_tel_sco, 
+                                                   sco_tel_socket);
 
         /* Reproduz o áudio recebido do smartphone */
-        if (pa_simple_write(reproducao, scobuffer, compr_pact_tel_sco, &error) < 0) {
+        if (pa_simple_write(reproducao, scobuffer, 
+                            compr_pact_tel_sco, &error) < 0) {
             printf("pa_simple_write() failed: %s\n", pa_strerror(error));
+            ocorreu_erro=errno;
             break;
         }
 
@@ -309,41 +334,52 @@ int loop_chamada()
          * encaminhamento ao headset */
         compr_pact_tel_rfcomm = recv(rfcomm_tel_socket, rfcommbuffer, 
                                   sizeof (rfcommbuffer), 0);
-        printf("RX rfcomm smartphone: %d sock: %d\n", compr_pact_tel_rfcomm, rfcomm_tel_socket);
+        printf("RX rfcomm smartphone: %d sock: %d\n", compr_pact_tel_rfcomm, 
+                                                      rfcomm_tel_socket);
 
         /* Verifica se foi recebido algum pacote do smartphone ou se 
          * ocorreu alguma falha que tenha bloqueado o socket, 
          * exigindo a interrupção do loop */
         if (compr_pact_tel_rfcomm < 0 && errno != EWOULDBLOCK) {
             perror("ERRO RX rfcomm smartphone");
+            ocorreu_erro=errno;
             break;
         } else if (compr_pact_tel_rfcomm > 0) {
             compr_pact_fone_rfcomm = send(rfcomm_fone_socket, rfcommbuffer, 
                                       compr_pact_tel_rfcomm, 0);
-            printf("TX rfcomm headset: %d sock: %d\n", compr_pact_fone_rfcomm, rfcomm_fone_socket);
+            printf("TX rfcomm headset: %d sock: %d\n", compr_pact_fone_rfcomm, 
+                                                       rfcomm_fone_socket);
         }
 
 
         /* Envia os pacotes de áudio provenientes do smartphone
          * que estão armazenados no buffer, para o headset */
-        if ((compr_pact_fone_sco = send(sco_fone_socket, scobuffer, 48, 0)) <= 0) {
+        if ((compr_pact_fone_sco = send(sco_fone_socket, scobuffer, 
+                                    compr_pact_tel_sco, 0)) <= 0) {
             perror("ERRO TX sco headset");
+            ocorreu_erro=errno;
             break;
         }
-        printf("TX sco headset: %d sock: %d\n", compr_pact_fone_sco, sco_fone_socket);
+        printf("TX sco headset: %d sock: %d\n", compr_pact_fone_sco, 
+                                                sco_fone_socket);
 
         /* Recebe os constantes pacotes de áudio provenientes do headset
          * e armazena no buffer para posterior execução e 
          * encaminhamento para o smartphone */
-        if ((compr_pact_fone_sco = recv(sco_fone_socket, scobuffer, 48, 0)) <= 0) {
+        if ((compr_pact_fone_sco = recv(sco_fone_socket, scobuffer, 
+                                    48, 0)) <= 0) {
             perror("ERRO RX sco headset");
+            ocorreu_erro=errno;
             break;
         }
-        printf("RX sco headset: %d sock: %d\n", compr_pact_fone_sco, sco_fone_socket);
+        printf("RX sco headset: %d sock: %d\n", compr_pact_fone_sco, 
+                                                sco_fone_socket);
 
         /* Reproduz o áudio recebido do headset */
-        if (pa_simple_write(reproducao, scobuffer, compr_pact_fone_sco, &error) < 0) {
+        if (pa_simple_write(reproducao, scobuffer, 
+                            compr_pact_fone_sco, &error) < 0) {
             printf("pa_simple_write() failed: %s\n", pa_strerror(error));
+            ocorreu_erro=errno;
             break;
         }
 
@@ -352,36 +388,65 @@ int loop_chamada()
          * encaminhamento ao smartphone */
         compr_pact_fone_rfcomm = recv(rfcomm_fone_socket, rfcommbuffer, 
                                   sizeof (rfcommbuffer), 0);
-        printf("RX rfcomm headset: %d sock: %d\n", compr_pact_fone_rfcomm, rfcomm_fone_socket);
+        printf("RX rfcomm headset: %d sock: %d\n", compr_pact_fone_rfcomm, 
+                                                   rfcomm_fone_socket);
 
         /* Verifica se foi recebido algum pacote do headset ou se 
          * ocorreu alguma falha que tenha bloqueado o socket, 
          * exigindo a interrupção do loop */
         if (compr_pact_fone_rfcomm < 0 && errno != EWOULDBLOCK) {
             perror("ERRO RX rfcomm headset");
+            ocorreu_erro=errno;
             break;
         } else if (compr_pact_fone_rfcomm > 0) {
             compr_pact_tel_rfcomm = send(rfcomm_tel_socket, rfcommbuffer, 
                                       compr_pact_fone_rfcomm, 0);
-            printf("TX rfcomm smartphone: %d sock: %d\n", compr_pact_tel_rfcomm, rfcomm_tel_socket);
+            printf("TX rfcomm smartphone: %d sock: %d\n", compr_pact_tel_rfcomm, 
+                                                          rfcomm_tel_socket);
         }
 
         /* Envia os pacotes de áudio provenientes do headset
          * que estão armazenados no buffer, para o smartphone */
-        if ((compr_pact_tel_sco = send(sco_tel_socket, scobuffer, 48, 0)) <= 0) {
+        if ((compr_pact_tel_sco = send(sco_tel_socket, scobuffer, 
+                                    compr_pact_fone_sco, 0)) <= 0) {
             perror("ERRO TX sco smartphone");
+            ocorreu_erro=errno;
             break;
         }
-        printf("TX sco smartphone: %d sock: %d\n", compr_pact_tel_sco, sco_tel_socket);
+        printf("TX sco smartphone: %d sock: %d\n", compr_pact_tel_sco, 
+                                                   sco_tel_socket);
     }
 
     pa_simple_free(reproducao);
+    
+    encerra_sockets_sco();
+    
+    /* Caso tenha ocorrido um erro diferente de "Connection reset by peer", 
+     * que ocorre quando o usuário do smartphone encerra a chamada, as conexões
+     * são finalizadas */
+    if(ocorreu_erro!=0 && ocorreu_erro!=ECONNRESET){
+        encerra_sockets_rfcomm();
+        printf("Conexões sockets finalizadas devido ao erro\n");
+        return -1;
+    }else{
+        printf("A chamada foi finalizada\n");
+        return 0;
+    }
+}
 
-    close(sco_fone_socket);
-    close(sco_tel_socket);
+void encerra_sockets_rfcomm()
+{
+    if(rfcomm_fone_socket!=-1)
+        close(rfcomm_fone_socket);
+    if(rfcomm_tel_socket!=-1)
+        close(rfcomm_tel_socket);
+}
 
-    printf("A chamada foi finalizada\n");
-
-    return 0;
+void encerra_sockets_sco()
+{
+    if(sco_fone_socket!=-1)
+        close(sco_fone_socket);
+    if(rfcomm_tel_socket!=-1)
+        close(sco_tel_socket);
 }
 

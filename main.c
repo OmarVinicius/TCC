@@ -14,14 +14,14 @@
 int main(int argc, char* argv[]) 
 {
     if(argc==1){
-		printf("Insira como argumento, o endereço MAC do headset\n");
-		return EXIT_FAILURE;
-	}else{
-		if(argc>2){
-			printf("Insira como argumento, apenas o endereço MAC do headset\n");
-			return EXIT_FAILURE;
-		}
+	printf("Insira como argumento, o endereço MAC do headset\n");
+	return EXIT_FAILURE;
+    }else{
+	if(argc>2){
+            printf("Insira como argumento, apenas o endereço MAC do headset\n");
+            return EXIT_FAILURE;
 	}
+    }
 	
     char endr_fone[18];
     strcpy(endr_fone, argv[1]);
@@ -48,13 +48,18 @@ int main(int argc, char* argv[])
     /* Loop infinito para manter a conexão dos sockets com os alvos e
      * permitir a captura de todas as chamadas efetuadas */
     while (1) {
-        if (inicializa_sockets_tel() == -1)
+        if (inicializa_sockets_rfcomm() == -1){
+            printf("%s\n", "Erro ao iniciar os sockets rfcomm");
             return EXIT_FAILURE;
+        }
 
-        if (inicializa_sockets_fone() == -1)
+        if (inicializa_sockets_sco() == -1){
+            printf("%s\n", "Erro ao iniciar os sockets sco");
             return EXIT_FAILURE;
+        }
 
-        loop_chamada();
+        if (loop_chamada()==-1)
+            return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;

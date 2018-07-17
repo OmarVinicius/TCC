@@ -1,6 +1,6 @@
 # TCC
 
-Algoritmo baseado nas seguintes implementações:
+Algoritmo experimental baseado nas seguintes implementações:
 
 - Criação de perfil de serviço Headset em um computador e respectiva simulação.
     Disponível em: http://www.drdobbs.com/mobile/using-bluetooth/232500828
@@ -12,22 +12,19 @@ Algoritmo baseado nas seguintes implementações:
     
 - Código-fonte da biblioteca BlueZ
 
-Implementação testada em Ubuntu 16.04 com BlueZ 5.37.
-Necessário o uso de 2 adaptadores Bluetooth com SSP.
+Inclui a ferramenta bdaddr, para modificação do endereço MAC dos dispositivos Bluetooth, com instruções de compilação obtida em: http://blog.petrilopia.net/linux/change-your-bluetooth-device-mac-address/
 
-Instruções de compilação:
+
+Implementação testada em Ubuntu 16.04 com BlueZ 5.37.
+Necessário o uso de 2 adaptadores Bluetooth com suporte ao emparelhamento SSP.
+
+Instruções de uso:
 
 - Instalar as bibliotecas libbluetooth, libpulse e libdbus:
 
     - sudo apt-get install libluetooth-dev
     - sudo apt-get install libpulse-dev
     - sudo apt-get install libdbus-1-dev
-
-- Compilar:
-    
-    - gcc main.c gerenc_adaptador.c servicos.c sockets.c -I "/usr/include/dbus-1.0/" -I "/usr/lib/x86_64-linux-gnu/dbus-1.0/include/" -L `pkg-config --cflags --libs libpulse-simple` -L `pkg-config --cflags --libs dbus-1` -lbluetooth -o tcc
-
-Instruções de uso geral:
 
 - Executar as seguintes alterações para que os serviços possam ser editados no SDP:
 
@@ -37,38 +34,16 @@ Instruções de uso geral:
     - sudo systemctl restart bluetooth
     - sudo chmod 777 /var/run/sdp
     
-- Ligar todos os adaptadores:
+- Tornar executável o script necessário a configuração e execução do algoritmo:
 
-    - sudo hciconfig hci<índice_adaptador> up
+    - chmod a+rx script-tcc.sh
 
-- Através do btmgmt, desativar as configurações de Secure Connections e/ou Low Energy, de cada adaptador,
-e habilitar o modo connectable e discoverable no adaptador de índice 0.
+- Executá-lo:
 
-- Através do sdptool, excluir todos os registros de perfis de serviço Headset Audio Gateway:
-
-    - sudo sdptool browse local
-    - sudo sdptool del <Service_RecHandle>
-
-- Executar o comando para reparo do bug de roteamento da SCO nos adaptadores que sejam Broadcom BCM20702:
-
-    - sudo hcitool -i hci<índice_adaptador> cmd 0x3F 0x01C 0x01 0x02 0x00 0x01 0x01
+    - sudo ./script-tcc.sh
     
-- Buscar endereço MAC do headset:
+- Na ferramenta bluetoothctl efetuar os seguintes passos:
 
-    - sudo hcitool scan
-    
-- Executar o algoritmo:
-
-    - sudo ./tcc <endereço_MAC_headset>
-    
-- Configurar o pareamento Just Works do adaptador (índice 1) que irá conectar-se ao headset, e aguardar conexão do smartphone e aceitar, via bluetoothctl:
-
-    - sudo bluetoothctl
-    - select <endereço_MAC_do_adaptador_índice_1>
-    - agent NoInputNoOutput
-    - default-agent
-    - select <endereço_MAC_do_adaptador_índice_0>
-    - agent NoInputNoOutput
-    - default-agent
-    - yes para as requisições de serviço
-    - trust <endereço_MAC_do_smartphone>
+    - Configurar o agente de conexão escolhido como padrão: default-agent
+    - Aguardar a conexão do smartphone
+    - Quando o smartphone conectar, autorizar todas as solicitações de serviços
